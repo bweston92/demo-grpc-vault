@@ -18,6 +18,11 @@ import (
 )
 
 func main() {
+	transportAuth, err := getTransportCredentialsOption()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ssi := grpc_middleware.ChainStreamServer(
 		grpc_ctxtags.StreamServerInterceptor(),
 		grpc_prometheus.StreamServerInterceptor,
@@ -30,6 +35,7 @@ func main() {
 	)
 
 	srv := grpc.NewServer(
+		transportAuth,
 		grpc.StreamInterceptor(ssi),
 		grpc.UnaryInterceptor(usi),
 	)
@@ -37,7 +43,7 @@ func main() {
 	// Register the implementation for hello server.
 	hello.RegisterHelloServer(srv, getHelloImplementation())
 
-	nl, err := makeGRPCListener()
+	nl, err := net.Listen("tcp", ":8000")
 	if err != nil {
 		log.Fatalf("unable to get gRPC listener: %s", err)
 	}
@@ -47,10 +53,11 @@ func main() {
 
 /////////////////////////////////////////////////////////////
 // The following lines contain the the logic for getting a
-// certificate and listener with the Vault token provided.
+// certificate for gRPC server option with the Vault token
+// provided.
 /////////////////////////////////////////////////////////////
 
-func makeGRPCListener() (net.Listener, error) {
+func getTransportCredentialsOption() (grpc.ServerOption, error) {
 	v, err := vault.NewClient(vault.DefaultConfig())
 	if err != nil {
 		return nil, err
@@ -62,8 +69,7 @@ func makeGRPCListener() (net.Listener, error) {
 		return nil, errors.New("Vault needs PKI secret mounted")
 	}
 
-	// @todo get certificate from Vault (v)
-	return net.Listen("tcp", ":8000")
+	return grpc.Creds(nil), errors.New("incomplete gRPC creds config")
 }
 
 /////////////////////////////////////////////////////////////
