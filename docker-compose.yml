@@ -1,0 +1,28 @@
+version: '3.5'
+services:
+  vault_server:
+    image: vault:0.9.5
+    command: vault server -dev -log-level=trace
+    environment:
+      SKIP_SETCAP: "true"
+      VAULT_DEV_LISTEN_ADDRESS: vault_server:8200
+      VAULT_DEV_ROOT_TOKEN_ID: 865a8609-821d-46c7-b5c7-607b3f0999b9
+      VAULT_TOKEN: 865a8609-821d-46c7-b5c7-607b3f0999b9
+      VAULT_ADDR: http://vault_server:8200
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      VAULT_ADDR: http://vault_server:8200
+      VAULT_TOKEN: 865a8609-821d-46c7-b5c7-607b3f0999b9
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      BACKEND_ADDR: backend:8000
+      VAULT_ADDR: http://vault_server:8200
+      VAULT_TOKEN: 865a8609-821d-46c7-b5c7-607b3f0999b9
+    ports:
+      - 8000:8000
