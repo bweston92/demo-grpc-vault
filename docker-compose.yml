@@ -11,8 +11,10 @@ services:
       VAULT_ADDR: http://vault_server:8200
 
   backend:
-    build:
-      context: ./backend
+    image: golang:1.9
+    command: go run /go/src/github.com/bweston92/demo-grpc-vault/backend/main.go
+    volumes:
+      - ./backend:/go/src/github.com/bweston92/demo-grpc-vault/backend
     environment:
       VAULT_ADDR: http://vault_server:8200
       VAULT_TOKEN: 865a8609-821d-46c7-b5c7-607b3f0999b9

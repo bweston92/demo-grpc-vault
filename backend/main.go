@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"log"
 	"net"
-	"os"
 
 	"github.com/bweston92/demo-grpc-vault/pb/hello"
+	vault "github.com/hashicorp/vault/api"
 	"google.golang.org/grpc"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware"
@@ -42,11 +45,43 @@ func main() {
 	log.Fatal(srv.Serve(nl))
 }
 
+/////////////////////////////////////////////////////////////
+// The following lines contain the the logic for getting a
+// certificate and listener with the Vault token provided.
+/////////////////////////////////////////////////////////////
+
 func makeGRPCListener() (net.Listener, error) {
-	_ = os.Getenv("VAULT_ADDR")
-	_ = os.Getenv("VAULT_TOKEN")
+	v, err := vault.NewClient(vault.DefaultConfig())
+	if err != nil {
+		return nil, err
+	}
 
-	// @todo get certificate from Vault
+	if m, err := v.Sys().ListMounts(); err != nil {
+		return nil, err
+	} else if _, ok := m["pki/"]; !ok {
+		return nil, errors.New("Vault needs PKI secret mounted")
+	}
 
+	// @todo get certificate from Vault (v)
 	return net.Listen("tcp", ":8000")
+}
+
+/////////////////////////////////////////////////////////////
+// The following lines contain the simple implementation for
+// the gRPC service "Hello"
+/////////////////////////////////////////////////////////////
+
+// Simple is just an "simple" implementation of hello.
+type Simple struct{}
+
+func getHelloImplementation() hello.HelloServer {
+	return &Simple{}
+}
+
+// SayHelloToName will take the request and extract the name
+// returning the name in a hello world sting.
+func (s *Simple) SayHelloToName(_ context.Context, req *hello.SayHelloToNameRequest) (*hello.SayHelloToNameResponse, error) {
+	return &hello.SayHelloToNameResponse{
+		Text: fmt.Sprintf("Hello %s, welcome to demo-grpc-vault!", req.GetFullName()),
+	}, nil
 }
